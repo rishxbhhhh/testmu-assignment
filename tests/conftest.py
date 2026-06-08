@@ -6,8 +6,10 @@ import pytest
 import yaml
 
 from utils.driver_factory import load_config, create_driver
+from utils.logger import get_logger
 
 CONFIG = load_config()
+logger = get_logger(__name__)
 
 
 @pytest.hookimpl(tryfirst=True, hookwrapper=True)

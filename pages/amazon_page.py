@@ -1,49 +1,49 @@
 """
 Amazon Page Object — search, add to cart, retrieve price.
 """
+import os
+import time
 from selenium.webdriver.common.by import By
 
 from pages.base_page import BasePage
+from utils.driver_factory import load_config
 from utils.logger import get_logger
 
 logger = get_logger(__name__)
+CONFIG = load_config()
 
 
 class AmazonPage(BasePage):
     """Page Object for Amazon.in."""
 
     # ── Locators ──────────────────────────────────────
-    SEARCH_BOX = (By.ID, "twotabsearchtextbox")
-    SEARCH_BUTTON = (By.ID, "nav-search-submit-button")
-    # First organic result — Amazon can have sponsored blocks before it
-    FIRST_RESULT = (By.CSS_SELECTOR, '[data-component-type="s-search-result"]:first-of-type h2 a')
-    # Fallback: Amazon's own data-cel-widget attribute on search result rows
-    FIRST_RESULT_FALLBACK = (By.CSS_SELECTOR, '[data-cel-widget*="search_result"]:first-of-type h2 a')
+    # Use direct URL navigation instead of search box (avoids headless detection)
+    PRODUCT_LINK = (By.CSS_SELECTOR, 'div[data-component-type="s-search-result"]:first-of-type h2 a')
     ADD_TO_CART_BUTTON = (By.ID, "add-to-cart-button")
+    ADD_TO_CART_FALLBACK = (By.NAME, "submit.add-to-cart")
     CART_PRICE = (By.CSS_SELECTOR, ".a-price-whole")
     SIDEBAR_PRICE = (By.CSS_SELECTOR, "#attach-accessory-pane .a-price-whole")
 
     # ── Actions ───────────────────────────────────────
 
     def search(self, query: str) -> None:
-        """Navigate to Amazon and search for a product."""
-        logger.info("Searching Amazon for: %s", query)
-        self.type(self.SEARCH_BOX, query)
-        self.click(self.SEARCH_BUTTON)
+        """Navigate directly to search results page (bypasses search box)."""
+        url = f"{CONFIG['urls']['amazon']}/s?k={query.replace(' ', '+')}"
+        logger.info("Navigating to: %s", url)
+        self.driver.get(url)
 
     def open_first_result(self) -> None:
-        """Click the first organic search result with fallback."""
+        """Click the first organic search result."""
         logger.info("Opening the first search result")
-        # Try primary selector first
-        if self.is_present(self.FIRST_RESULT, timeout=5):
-            self.click(self.FIRST_RESULT)
-        # Fallback to Amazon's data-cel-widget attribute
-        elif self.is_present(self.FIRST_RESULT_FALLBACK, timeout=3):
-            self.click(self.FIRST_RESULT_FALLBACK)
-        # Last resort: any clickable link inside the search results
+        if self.is_present(self.PRODUCT_LINK, timeout=10):
+            self.click(self.PRODUCT_LINK)
         else:
-            logger.warning("Primary & fallback locators failed, trying generic first h2 a")
-            self.click((By.CSS_SELECTOR, '[data-component-type="s-search-result"] h2 a:first-of-type'))
+            # Dump page source for debugging
+            os.makedirs("debug", exist_ok=True)
+            with open(f"debug/page_dump_{int(time.time())}.html", "w", encoding="utf-8") as f:
+                f.write(self.driver.page_source)
+            logger.error("First product link not found. Page title: %s", self.driver.title)
+            raise RuntimeError(f"Could not find any product link on search results. Page title: {self.driver.title}")
 
     def add_to_cart(self) -> None:
         """Click 'Add to Cart'."""
