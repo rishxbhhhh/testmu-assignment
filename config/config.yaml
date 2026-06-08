@@ -1,0 +1,27 @@
+# ── Test Config ──
+framework: selenium
+browsers: [chrome, edge]       # local: first is default. LT: tests run on all listed
+parallel_threads: 2            # pytest-xdist -n value
+default_wait: 10               # seconds, for WebDriverWait
+
+# ── Target URLs ──
+urls:
+  amazon: "https://www.amazon.in"
+
+# ── Search Queries ──
+search:
+  test1_query: "iPhone 15"
+  test2_query: "Galaxy S24"
+
+# ── LambdaTest Cloud (set LT_USERNAME + LT_ACCESS_KEY in env) ──
+lambdatest:
+  enabled: false               # toggle to true for cloud execution
+  hub_url: "https://hub.lambdatest.com/wd/hub"
+  build_name: "TestMu Assignment - {datetime}"
+  browsers:
+    - browser: Chrome
+      version: "latest"
+      platform: Windows 11
+    - browser: MicrosoftEdge
+      version: "latest"
+      platform: Windows 11
