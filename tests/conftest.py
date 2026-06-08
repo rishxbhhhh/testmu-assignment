@@ -10,6 +10,14 @@ from utils.driver_factory import load_config, create_driver
 CONFIG = load_config()
 
 
+@pytest.hookimpl(tryfirst=True, hookwrapper=True)
+def pytest_runtest_makereport(item, call):
+    """Expose test result for the driver fixture (used for screenshot on failure)."""
+    outcome = yield
+    rep = outcome.get_result()
+    setattr(item, "rep_" + rep.when, rep)
+
+
 def pytest_addoption(parser):
     """Accept --lt flag for LambdaTest cloud execution."""
     parser.addoption(
@@ -34,4 +42,10 @@ def driver(request, browser):
     webdriver = create_driver(browser=browser.lower(), use_lambdatest=use_lt)
     webdriver.get(CONFIG["urls"]["amazon"])
     yield webdriver
+    # Screenshot on failure for debugging
+    if request.node.rep_call.failed:
+        screenshot_path = f"screenshots/{request.node.name}_{browser}.png"
+        os.makedirs("screenshots", exist_ok=True)
+        webdriver.save_screenshot(screenshot_path)
+        logger.info("📸 Screenshot saved: %s", screenshot_path)
     webdriver.quit()
